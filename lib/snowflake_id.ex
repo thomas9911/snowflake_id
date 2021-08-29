@@ -47,6 +47,34 @@ defmodule SnowflakeId do
   6837401535245324289
   ```
 
+  Small warning, because the timestamp only uses 41 bits and the default timestamp starts from 1970. The maximum time that can be stored is:
+
+  ```elixir
+  iex> bits = 0b11111111111111111111111111111111111111111
+  iex> DateTime.from_unix(bits, :millisecond)
+  {:ok, ~U[2039-09-07 15:47:35.551Z]}
+  ```
+
+  You can mitigate this by using your own timestamp function or use the helper function:
+
+  ```elixir
+  # from the start of 2000
+  iex> from = ~U[2000-01-01T00:00:00Z]
+  iex> get_time = SnowflakeId.timestamp_factory(from)
+  iex> with_own_get_time = SnowflakeId.new(1, 1, get_time: get_time)
+  iex> default_get_time = SnowflakeId.new(1, 1)
+  iex> Enum.at(with_own_get_time, 0) < Enum.at(default_get_time, 0)
+  true
+  ```
+
+  we can now use this longer:
+
+  ```elixir
+  iex> bits = 0b11111111111111111111111111111111111111111
+  iex> ~U[2000-01-01T00:00:00Z] |> DateTime.add(bits, :millisecond) |> DateTime.truncate(:second)
+  ~U[2069-09-06 15:47:35Z]
+  ```
+
   """
 
   @type t :: %__MODULE__{
@@ -59,9 +87,9 @@ defmodule SnowflakeId do
         }
 
   @type opts :: [
-    bulk: boolean,
-    get_time: (-> integer)
-  ]
+          bulk: boolean,
+          get_time: (() -> integer)
+        ]
 
   use Bitwise
 
@@ -132,6 +160,16 @@ defmodule SnowflakeId do
   end
 
   @doc """
+  Helper function to generate a zero-arity function that returns the amount of milliseconds since `epoch`
+  """
+  @spec timestamp_factory(DateTime.t()) :: (() -> integer)
+  def timestamp_factory(epoch) do
+    fn ->
+      DateTime.diff(DateTime.utc_now(), epoch, :millisecond)
+    end
+  end
+
+  @doc """
   Format the struct to return a id
   """
   @spec format_id(t()) :: integer
@@ -141,10 +179,13 @@ defmodule SnowflakeId do
         idx: idx,
         last_time_millis: last_time_millis
       }) do
-    last_time_millis <<< 22 |||
-      machine_id <<< 17 |||
-      node_id <<< 12 |||
-      idx
+    rem(
+      last_time_millis <<< 22 |||
+        machine_id <<< 17 |||
+        node_id <<< 12 |||
+        idx,
+      0b1000000000000000000000000000000000000000000000000000000000000000
+    )
   end
 
   @doc """

@@ -4,7 +4,7 @@ defmodule SnowflakeId.MixProject do
   def project do
     [
       app: :snowflake_id,
-      version: "0.1.0",
+      version: "0.1.1",
       elixir: "~> 1.10",
       start_permanent: Mix.env() == :prod,
       description: "Snowflake Identifier in Elixir, based on Rust's rs-snowflake",
@@ -16,30 +16,39 @@ defmodule SnowflakeId.MixProject do
         "coveralls.post": :test,
         "coveralls.html": :test
       ],
-      package: [
-        licenses: [:unlicenced],
-        links: %{
-          github: "https://github.com/thomas9911/snowflake_id"
-        }
-      ],
+      package: package(),
+      aliases: aliases()
     ]
   end
 
-  # Run "mix help compile.app" to learn about applications.
   def application do
     [
       extra_applications: [:logger]
     ]
   end
 
-  # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:ex_doc, ">= 0.0.0", only: [:dev], runtime: false},
-      {:benchee, ">= 0.0.0", only: [:dev]},
+      {:ex_doc, "~> 0.25", only: [:dev], runtime: false},
+      {:benchee, "~> 1.0", only: [:dev]},
       {:excoveralls, "~> 0.10", only: :test},
-      {:credo, "~> 1.4", only: [:dev, :test], runtime: false},
-      {:dialyxir, "~> 1.0", only: [:dev], runtime: false}
+      {:credo, "~> 1.5", only: [:dev, :test], runtime: false},
+      {:dialyxir, "~> 1.1", only: [:dev], runtime: false}
+    ]
+  end
+
+  defp package do
+    [
+      licenses: [:unlicenced],
+      links: %{
+        github: "https://github.com/thomas9911/snowflake_id"
+      }
+    ]
+  end
+
+  defp aliases do
+    [
+      q: "do format, credo, dialyzer"
     ]
   end
 end

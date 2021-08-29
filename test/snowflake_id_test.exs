@@ -58,6 +58,56 @@ defmodule SnowflakeIdTest do
     assert id == parts |> Enum.join() |> String.to_integer(2)
   end
 
+  test "format_id works till max" do
+    id =
+      %SnowflakeId{
+        machine_id: 0b11111,
+        node_id: 0b11111,
+        idx: 0b111111111111,
+        last_time_millis: 0b11111111111111111111111111111111111111111
+      }
+      |> SnowflakeId.format_id()
+
+    assert id == 0b111111111111111111111111111111111111111111111111111111111111111
+  end
+
+  test "format_id limits output to 64 bits" do
+    id =
+      %SnowflakeId{
+        machine_id: 0b11111,
+        node_id: 0b11111,
+        idx: 0b111111111111,
+        # 42 bits instead of 41
+        last_time_millis: 0b111111111111111111111111111111111111111111
+      }
+      |> SnowflakeId.format_id()
+
+    assert id == 0b111111111111111111111111111111111111111111111111111111111111111
+  end
+
+  test "timestamp_factory returns positive time in milliseconds" do
+    assert SnowflakeId.timestamp_factory(DateTime.utc_now()).() >= 0
+    assert SnowflakeId.timestamp_factory(DateTime.utc_now()).() < 500
+  end
+
+  test "timestamp_factory works" do
+    timestamp1 = SnowflakeId.timestamp_factory(~U[1970-01-01T00:00:00Z]).()
+    timestamp2 = SnowflakeId.timestamp_factory(~U[1980-01-01T00:00:00Z]).()
+    timestamp3 = SnowflakeId.timestamp_factory(~U[1990-01-01T00:00:00Z]).()
+    timestamp4 = SnowflakeId.timestamp_factory(~U[2000-01-01T00:00:00Z]).()
+    timestamp5 = SnowflakeId.timestamp_factory(~U[2010-01-01T00:00:00Z]).()
+    timestamp6 = SnowflakeId.timestamp_factory(~U[2020-01-01T00:00:00Z]).()
+
+    assert timestamp1 > timestamp2
+    assert timestamp2 > timestamp3
+    assert timestamp3 > timestamp4
+    assert timestamp4 > timestamp5
+    assert timestamp5 > timestamp6
+
+    assert timestamp1 > timestamp6
+    assert timestamp6 > 0
+  end
+
   describe "Enumerable" do
     setup do
       init = %{counter: 0, time: 5000}
